@@ -1,221 +1,165 @@
-from telegram.ext import Updater
-from telegram import bot
-from emoji import emojize
-import json
-from threading import Timer
+from selenium import webdriver
+from selenium.webdriver import DesiredCapabilities
+import pickle
+from proxylist import ProxyList
 
-# !/usr/bin/env python
-# -*- coding: utf-8 -*-
+pl = ProxyList()
+pl.load_file('./web/proxy.txt')
+proxy = pl.random().address()
+print(proxy[1:-5])
+
+from selenium.webdriver.chrome.options import Options
+# from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.common.by import By
+
+from selenium.webdriver.common.proxy import Proxy, ProxyType
+
+prox = Proxy()
+prox.proxy_type = ProxyType.MANUAL
+prox.http_proxy = proxy
+prox.socks_proxy = proxy
+prox.ssl_proxy = proxy
+
+capabilities = webdriver.DesiredCapabilities.CHROME
+prox.add_to_capabilities(capabilities)
+
+# firefox_capabilities = DesiredCapabilities.FIREFOX
+# firefox_capabilities['marionette'] = True
+# firefox_capabilities['binary'] = '/usr/bin/firefox'
+
+# chrome_options = Options()
+# chrome_options.add_argument("user-data-dir=selenium")
+
+# driver = webdriver.Firefox(capabilities=firefox_capabilities)
+# driver = webdriver.Firefox(capabilities=firefox_capabilities ,firefox_options=chrome_options)
+chrome_options = Options()
+chrome_options.add_argument("--headless")
+chrome_options.add_argument("--window-size=100,100")
+# chrome_options.add_argument("user-data-dir=selenium")
 
 
-bot_message_id = 100000
+def my_proxy(PROXY_HOST, PROXY_PORT):
+    fp = webdriver.FirefoxProfile()
+    # Direct = 0, Manual = 1, PAC = 2, AUTODETECT = 4, SYSTEM = 5
+    print
+    PROXY_PORT
+    print
+    PROXY_HOST
+    fp.set_preference("network.proxy.type", 1)
+    fp.set_preference("network.proxy.http", PROXY_HOST)
+    fp.set_preference("network.proxy.http_port", int(PROXY_PORT))
+    fp.set_preference("general.useragent.override", "whater_useragent")
+    fp.update_preferences()
+    return webdriver.Firefox(firefox_profile=fp)
 
-# updater = Updater(token='628591499:AAEM8_wsBtPsldKKLCr-ozepC5RId02nZGo')
-updater = Updater(token='628591499:AAEM8_wsBtPsldKKLCr-ozepC5RId02nZGo')
-# updater = Updater(token='660812730:AAEGP-xXkMKoplHR6YsUECqXB8diNgvlfbs')
 
-dispatcher = updater.dispatcher
+webdriver.DesiredCapabilities.CHROME['proxy'] = {
+    "httpProxy": proxy,
+    "ftpProxy": proxy,
+    "sslProxy": proxy,
+    "noProxy": None,
+    "proxyType": "MANUAL",
+    "class": "org.openqa.selenium.Proxy",
+    "autodetect": False
+}
+# driver = webdriver.Chrome(chrome_options=chrome_options,desired_capabilities=capabilities)
+# driver = my_proxy("64.132.98.60","80")
+# you have to use remote, otherwise you'll have to code it yourself in python to
+# driver = webdriver.Remote("https://www.aparat.com/v/aQfED", webdriver.DesiredCapabilities.CHROME)
 
-import logging
-import requests
 
-state = 1
-
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-
-
-# def start(bot, update):
-#     bot.send_message(chat_id=update.message.chat_id, text="سلام خوش آمدید لطفا عکس گرفته شده را اضافه نمایید")
-#     state = 2
+# import browsercookie
 #
-#
-# from telegram.ext import CommandHandler
-#
-# start_handler = CommandHandler('start', start)
-# dispatcher.add_handler(start_handler)
+# cookies1 = browsercookie.firefox()
+# driver.add_cookie(cookies)
+
+import time
+import threading
 
 
-def manageBot(bot, user_id, chat_id):
-    #print(user_id,"KKKKKKKKKKKKKk")
-    bot.kickChatMember(chat_id, user_id, 3710)
+exitFlag = 0
 
 
-def removeMessageBot(bot, chat_id, message_id):
-    bot.deleteMessage(chat_id, message_id)
+class myThread (threading.Thread):
+   def __init__(self, threadID, name, counter):
+      threading.Thread.__init__(self)
+      self.threadID = threadID
+      self.name = name
+      self.counter = counter
 
+   def run(self):
+      print ("Starting " + self.name)
+      i = 0
+      driver = webdriver.Chrome(options=chrome_options)
+      # driver.set_page_load_timeout(10000000)
 
-def manageNewUser(bot, message_id, isOldMemberEqualNewMember, first_name, date, user_id_new, user_id, chat_id):
-    #     print(isOldMemberEqualNewMember, chat_id)
-    if not isOldMemberEqualNewMember:
-        r = requests.post("http://shayan2020.ir/Api/TelegramTabligh/user.php",
-                          data={'id': str(user_id_new), 'type': str(1), "lastpost": str(date), 'GroupAllowID': chat_id})
+      # driver.implicitly_wait(3000)
+      # driver.get("https://www.aparat.com/Gho3tShadow/live")
+      # time.sleep(100)
 
-
-    else:
-        r = requests.post("http://shayan2020.ir/Api/TelegramTabligh/user.php",
-                          data={'id': str(user_id_new), 'type': str(0), "lastpost": str(date), 'GroupAllowID': chat_id})
-
-        response = json.loads(r.text)
-        if response["items"][0]['errorcode'] == 3:
-            rose = emojize(":gift:", use_aliases=True)
-            s = rose + str(first_name) + ' خوش آمدید ' + rose
-            s += "\n" + " برای ثبت پیام لطفا ۱۰ نفر را اضافه کنید " + "\n"
-            s += "افراد متوجه دعوت کردن شما نخواهند شد" + " \n"
-            result = bot.send_message(chat_id=chat_id,
-                                      text=s)
-
-            t = Timer(15.0, removeMessageBot, [bot, chat_id, result['message_id']])
-            t.start()  # after 30 seconds, "hello, world" will be printed
-
-
-        else:
-            pass
-
-
-def manageExistUser(bot, user_id, date, first_name, message_id, chat_id):
-    r = requests.post("http://shayan2020.ir/Api/TelegramTabligh/user.php",
-                      data={'id': str(user_id), 'type': str(0), "lastpost": str(date), 'GroupAllowID': chat_id})
-    # print(r.text)
-    rr = json.loads(r.text)
-
-    if len(rr["items"]) > 0:
-        if rr["items"][0]['errorcode'] == 1:
-            userinvite = rr["items"][0]['userinvite']
-            bot.deleteMessage(chat_id, message_id)
-            rose = emojize(":gift:", use_aliases=True)
-            s = rose + str(first_name) + ' کاربر ' + rose + "\n"
-            s += "لطفا افراد بیشتری را دعوت کنید" + ("(" + str(userinvite) + "نفر)")
-            result = bot.send_message(chat_id=chat_id,
-                                      text=s, disable_notification=True)
-
-            t = Timer(15.0, removeMessageBot, [bot, chat_id, result['message_id']])
-            t.start()  # after 30 seconds, "hello, world" will be printed
-        elif rr["items"][0]['errorcode'] == 4:
-            userinvite = rr["items"][0]['diff']
-            bot.deleteMessage(chat_id, message_id)
-            rose = emojize(":gift:", use_aliases=True)
-            s = rose + str(first_name) + ' کاربر ' + rose + "\n"
-            s += "برای ارسال پست جدید لطفا صبر کنید" + ("(" + str(userinvite) + "دقیقه دیگر)")
-            result = bot.send_message(chat_id=chat_id,
-                                      text=s)
-            t = Timer(15.0, removeMessageBot, [bot, chat_id, result['message_id']])
-            t.start()  # after 30 seconds, "hello, world" will be printed
-        else:
-             bot.deleteMessage(chat_id, message_id)
+      while 1:
+          driver = webdriver.Chrome(options=chrome_options)
+          # print("a")
+          # driver.get("https://www.khodrobank.com/TestDrive/12574/6-%D8%B3%DB%8C%D9%84%D9%86%D8%AF%D8%B1-%DA%98%D8%A7%D9%BE%D9%86%DB%8C-%D8%AF%D8%B1-%D8%A8%D8%B1%D8%A7%D8%A8%D8%B1-4-%D8%B3%DB%8C%D9%84%D9%86%D8%AF%D8%B1-%DA%A9%D8%B1%D9%87-%D8%A7%DB%8C%D8%9B-%D8%A8%D8%B1%D8%B1%D8%B3%DB%8C-%D8%AF%D9%88-%DA%A9%D8%B1%D8%A7%D8%B3-%D8%A7%D9%88%D9%88%D8%B1-%D8%AF%D8%B3%D8%AA-%D8%AF%D9%88%D9%85-%D8%A8%D8%A7%D8%B2%D8%A7%D8%B1")
+          driver.get("https://www.aparat.com/v/aQfED")
+          # driver.get("https://cafebazaar.ir/app/shayan.app.applock/")
+          time.sleep(5)
+          driver.close()
+          print(i)
+          i+=1
+      print ("Exiting " + self.name)
 
 
 
 
 
-def echo(bot, update):
-    global bot_message_id
 
-    # message_id = update['message']['message_id']
-    # user_id = update['message']['new_chat_members'][0]['id']
-    # bot_message_id = message_id
-    # manageBot(bot, user_id, update.message.chat_id)
-    # user_id = update['message']['new_chat_members'][0]['id']
-    # manageBot(bot, user_id, update.message.chat_id)
+threads = []
+for o in range(0, 10):
+# for o in range(0, 2):
+ threads.append(myThread(1, "Thread-1", 1))
+ threads[o].start()
 
-    #print(update)
-    # print( )
-    # print(update['message']['forward_from']['is_bot'])
-    user_id = update['message']['from_user']['id']
-    date = update['message']['date']
+
+
+    # for o in range(0, 10):
+    #     # Create new threads
     #
-    # print(user_id, date)
+    #
+    #     thread2 = myThread(2, "Thread-2", 2,webdriver.Chrome())
+    #
+    #     # Start new Threads
+    #     thread1.start()
+    #     thread2.start()
+    #
+    #     # driver =
+    #     driver.append(webdriver.Chrome())
+    #     driver[o].get("https://www.aparat.com/v/aQfED")
+    #     print("AAA1")
+    #
+    # print("AAA2")
+    # time.sleep(2)
+    # for ip in driver:
+    #  ip.close()
 
-    # for i in range(400, 475):
-    #     try:
-    #         print(i)
-    #         bot.deleteMessage(update.message.chat_id, i)
-    #         # bot_message_id = message_id
-    #     except:
-    #         print()
-
-    # 0 is no update count 1 is update count
-
-
-    # print((update['message']['left_chat_member']), "OOO")
-    if update['message']['left_chat_member'] is not None:
-
-        message_id = update['message']['message_id']
-        bot.deleteMessage(update.message.chat_id, message_id)
-        if update['message']['left_chat_member']['is_bot']:
-           # print(bot_message_id,message_id)
-          pass
-
-    else:
-
-        if len(update['message']['new_chat_members']):
-            # print(type(update['message']['new_chat_members'][0]['is_bot']))
-            for u in range(0, len(update['message']['new_chat_members'])):
-#                 print(u,"@@@@@@@@@")
-                is_bot = update['message']['new_chat_members'][u]['is_bot']
-                if is_bot:
-                    try:
-                        message_id = update['message']['message_id']
-                        user_id = update['message']['new_chat_members'][u]['id']
-                        bot_message_id = message_id
-                        manageBot(bot, user_id, update.message.chat_id)
-                        user_id_from = update['message']['from_user']['id']
-                        manageBot(bot, user_id_from, update.message.chat_id)
-                        # print("AAAAAAAA", update['message']['from_user'])
-                        # user_id = update['message']['from_user']['id'][';;']
-
-                        # manageBot(bot, user_id, update.message.chat_id)
-
-                        result = bot.deleteMessage(update.message.chat_id, message_id)
-#                         print(result)
-                    except:
-                      pass
-
-
-                else:
-                    message_id = update['message']['message_id']
-                    userinvitecount = len(update['message']['new_chat_members'])
-                    if u == 0:
-                        bot.deleteMessage(update.message.chat_id, message_id)
-                        r2 = requests.post("http://shayan2020.ir/Api/TelegramTabligh/userinviteupdate.php",
-                                           data={'id': str(user_id), "count": str(userinvitecount)})
-                        #         print(r2.text)
-                    isOldMemberEqualNewMember = update['message']['from_user']['id'] == \
-                                                update['message']['new_chat_members'][u]['id']
-                    first_name = update['message']['new_chat_members'][u]['first_name']
-                    user_id_new = update['message']['new_chat_members'][u]['id']
-
-                    manageNewUser(bot, message_id, isOldMemberEqualNewMember, first_name, date, user_id_new, user_id,
-                                  update.message.chat_id)
-        elif update['message']['forward_from'] is not None:
-            if update['message']['forward_from']['is_bot']:
-                message_id = update['message']['message_id']
-                bot.deleteMessage(update.message.chat_id, message_id)
-                user_id_from = update['message']['from_user']['id']
-                manageBot(bot, user_id_from, update.message.chat_id)
-
-        else:
-
-            first_name = update['message']['from_user']['first_name']
-            message_id = update['message']['message_id']
-#             print(update.message.chat_id)
-            manageExistUser(bot, user_id, date, first_name, message_id, update.message.chat_id)
-
-
-from telegram.ext import MessageHandler, Filters
-
-echo_handler = MessageHandler(Filters.all, echo)
-dispatcher.add_handler(echo_handler)
-
-
-def unknown(bot, update):
-    bot.send_message(chat_id=update.message.chat_id, text="Sorry, I didn't understand that command.")
-
-
-
-
-unknown_handler = MessageHandler(Filters.command, unknown)
-dispatcher.add_handler(unknown_handler)
-
-updater.start_polling(poll_interval=1.0, timeout=20)
-# updater.start_polling()
-updater.idle()
+    # img = driver.find_element(By.ID,"cimg1").find_element(By.TAG_NAME,"img")
+    # src = img.get_attribute("src");
+    # number1 = src.split("/")[-1].split(".")[0]
+    #
+    # img = driver.find_element(By.ID,"cimg2").find_element(By.TAG_NAME,"img")
+    # src = img.get_attribute("src");
+    # number2 = src.split("/")[-1].split(".")[0]
+    #
+    # img = driver.find_element(By.ID,"cimg3").find_element(By.TAG_NAME,"img")
+    # src = img.get_attribute("src");
+    # number3 = src.split("/")[-1].split(".")[0]
+    #
+    # img = driver.find_element(By.ID,"cimg4").find_element(By.TAG_NAME,"img")
+    # src = img.get_attribute("src");
+    # number4 = src.split("/")[-1].split(".")[0]
+    # mynumber = int(number1+number2+number3+number4)
+    #
+    # # driver.execute_script("document.getElementsByTagName('input')[0].value='jjj'")
+    # driver.execute_script("document.getElementsByTagName('input')[0].value="+str(mynumber)+"")
+    # driver.execute_script("javascript:dosub()")
+    # time.sleep(5)
